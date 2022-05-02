@@ -1,0 +1,124 @@
+#!/bin/elixir
+
+# aqfr v 1.0.0
+# ©2022 barcek
+# License: MIT
+# @ github.com
+# /barcek/aqfr
+
+
+defmodule Aqfr do
+
+  def handle_exec(cmd, for \\ []) do
+    receive do
+      {:for, for} ->
+        handle_exec(cmd, for)
+      {:pre, pre} ->
+        flow = if nil != pre, do: "echo \"#{String.trim(pre)}\" | ", else: ""
+        prog = Enum.at(cmd, 0)
+        args =
+          cmd
+          |> Enum.slice(1, length(cmd) - 1)
+          |> Enum.join(" ")
+        str = "#{flow}#{prog} #{args}"
+        res =
+          str
+          |> String.to_charlist
+          |> :os.cmd
+          |> to_string()
+          |> String.trim()
+        Enum.each(for, &(if nil != &1, do: send(&1, {:pre, res}), else: IO.puts(res)))
+        handle_exec(cmd, for)
+    end
+  end
+
+  def invoke_cmd0(map) do
+    map
+    |> Enum.at(0)
+    |> elem(1)
+    |> Map.get(:pid)
+    |> send({:pre, nil})
+  end
+
+  def supply_for({k, v}) do
+    pid = Map.get(v, :pid)
+    for = Map.get(v, :for)
+    send(pid, {:for, for})
+    {k, v}
+  end
+
+  def supply_fors(map) do
+    map
+    |> Enum.map(&Aqfr.supply_for/1)
+    |> Enum.into(%{})
+  end
+
+  def update_for(tup, acc) do
+    {k, v} = tup
+    for = Enum.map(
+      Map.get(v, :for),
+      &(if "" == &1, do: nil, else: Map.get(acc, &1) |> Map.get(:pid)))
+    val = Map.put(v, :for, for)
+    Map.put(acc, k, val)
+  end
+
+  def update_fors(map) do
+    Enum.reduce(map, map, &Aqfr.update_for/2)
+  end
+
+  def spawn_proc({k, v}) do
+    pid = spawn(Aqfr, :handle_exec, [Map.get(v, :cmd)])
+    val = Map.put(v, :pid, pid)
+    {k, val}
+  end
+
+  def spawn_procs(map) do
+    map
+    |> Enum.map(&Aqfr.spawn_proc/1)
+    |> Enum.into(%{})
+  end
+
+  def get_idents(list) do
+    Enum.slice(list, 1, length(list) - 1)
+  end
+
+  def mapify_arg(arg, acc) do
+    arg_parts = String.split(arg, " ")
+    tag = "@"
+    key =
+      arg_parts
+      |> Enum.at(0)
+      |> String.split(tag)
+      |> Aqfr.get_idents()
+      |> Enum.at(0)
+    cmd = Enum.slice(arg_parts, 1, length(arg_parts) - 2)
+    for =
+      arg_parts
+      |> Enum.at(-1)
+      |> String.split(tag)
+      |> Aqfr.get_idents()
+    val = %{
+      :cmd => cmd,
+      :for => for
+    }
+    Map.put(acc, key, val)
+  end
+
+  def mapify_args(args) do
+    Enum.reduce(args, %{}, &Aqfr.mapify_arg/2)
+  end
+
+  def run() do
+    len = length(System.argv)
+    System.argv()
+    |> Aqfr.mapify_args()
+    |> Aqfr.spawn_procs()
+    |> Aqfr.update_fors()
+    |> Aqfr.supply_fors()
+    |> Aqfr.invoke_cmd0()
+    :timer.sleep(len * 5)
+  end
+
+end
+
+Aqfr.run()
