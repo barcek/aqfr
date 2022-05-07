@@ -1,6 +1,6 @@
 #!/bin/elixir
 
-# aqfr v 1.0.0
+# aqfr v 1.0.1
 # ©2022 barcek
 # License: MIT
 # @ github.com
@@ -53,8 +53,8 @@ defmodule Aqfr do
     |> Enum.into(%{})
   end
 
-  def update_for(tup, acc) do
-    {k, v} = tup
+  def update_for(tpl, acc) do
+    {k, v} = tpl
     for = Enum.map(
       Map.get(v, :for),
       &(if "" == &1, do: nil, else: Map.get(acc, &1) |> Map.get(:pid)))
@@ -78,24 +78,23 @@ defmodule Aqfr do
     |> Enum.into(%{})
   end
 
-  def get_idents(list) do
+  def get_idents(str) do
+    tag = "@"
+    list = String.split(str, tag)
     Enum.slice(list, 1, length(list) - 1)
   end
 
   def mapify_arg(arg, acc) do
     arg_parts = String.split(arg, " ")
-    tag = "@"
     key =
       arg_parts
       |> Enum.at(0)
-      |> String.split(tag)
       |> Aqfr.get_idents()
       |> Enum.at(0)
     cmd = Enum.slice(arg_parts, 1, length(arg_parts) - 2)
     for =
       arg_parts
       |> Enum.at(-1)
-      |> String.split(tag)
       |> Aqfr.get_idents()
     val = %{
       :cmd => cmd,
