@@ -1,6 +1,6 @@
 #!/bin/elixir
 
-# aqfr v 1.0.1
+# aqfr v 1.0.2
 # ©2022 barcek
 # License: MIT
 # @ github.com
@@ -8,7 +8,15 @@
 
 
 defmodule Aqfr do
+  @moduledoc """
+  Run and pipe each resulting output across a graph of shell commands,
+  each tagged to denote interrelationship and passed as a CLI argument
+  """
 
+  @doc """
+  Receive :for pid list and retain with command, then receive :pre value,
+  pipe to command and send output to each process with pid in :for list
+  """
   def handle_exec(cmd, for \\ []) do
     receive do
       {:for, for} ->
@@ -32,6 +40,9 @@ defmodule Aqfr do
     end
   end
 
+  @doc """
+  Send to first process in command graph empty :pre value to begin flow
+  """
   def invoke_cmd0(map) do
     map
     |> Enum.at(0)
@@ -40,6 +51,9 @@ defmodule Aqfr do
     |> send({:pre, nil})
   end
 
+  @doc """
+  Mapper: send to each process spawned the corresponding :for pid list
+  """
   def supply_for({k, v}) do
     pid = Map.get(v, :pid)
     for = Map.get(v, :for)
@@ -47,12 +61,18 @@ defmodule Aqfr do
     {k, v}
   end
 
+  @doc """
+  Send to each process spawned the corresponding :for pid list, via .map
+  """
   def supply_fors(map) do
     map
     |> Enum.map(&Aqfr.supply_for/1)
     |> Enum.into(%{})
   end
 
+  @doc """
+  Reducer: replace in map entry tuple each :for identifier with given pid
+  """
   def update_for(tpl, acc) do
     {k, v} = tpl
     for = Enum.map(
@@ -62,28 +82,43 @@ defmodule Aqfr do
     Map.put(acc, k, val)
   end
 
+  @doc """
+  Replace in each map entry each :for identifier with given pid, via .map
+  """
   def update_fors(map) do
     Enum.reduce(map, map, &Aqfr.update_for/2)
   end
 
+  @doc """
+  Mapper: spawn process for map entry tuple and extend with pid returned
+  """
   def spawn_proc({k, v}) do
     pid = spawn(Aqfr, :handle_exec, [Map.get(v, :cmd)])
     val = Map.put(v, :pid, pid)
     {k, val}
   end
 
+  @doc """
+  Spawn process for each map entry and extend with pid returned, via .map
+  """
   def spawn_procs(map) do
     map
     |> Enum.map(&Aqfr.spawn_proc/1)
     |> Enum.into(%{})
   end
 
+  @doc """
+  Get list of identifiers in string
+  """
   def get_idents(str) do
     tag = "@"
     list = String.split(str, tag)
     Enum.slice(list, 1, length(list) - 1)
   end
 
+  @doc """
+  Reducer: convert CLI argument from string to map entry keyed by identifier
+  """
   def mapify_arg(arg, acc) do
     arg_parts = String.split(arg, " ")
     key =
@@ -103,10 +138,16 @@ defmodule Aqfr do
     Map.put(acc, key, val)
   end
 
+  @doc """
+  Convert CLI argument list of strings to map with substrings, via .reduce
+  """
   def mapify_args(args) do
     Enum.reduce(args, %{}, &Aqfr.mapify_arg/2)
   end
 
+  @doc """
+  Perform primary tasks then delay
+  """
   def run() do
     len = length(System.argv)
     System.argv()
