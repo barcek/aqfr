@@ -1,6 +1,6 @@
 #!/bin/elixir
 
-# aqfr v 1.0.2
+# aqfr v 1.1.0
 # ©2022 barcek
 # License: MIT
 # @ github.com
@@ -9,8 +9,8 @@
 
 defmodule Aqfr do
   @moduledoc """
-  Run and pipe each resulting output across a graph of shell commands,
-  each tagged to denote interrelationship and passed as a CLI argument
+  Run and pipe as required resulting output across a graph of shell commands
+  tagged for interrelationship and passed as CLI arguments or read from file
   """
 
   @doc """
@@ -77,7 +77,8 @@ defmodule Aqfr do
     {k, v} = tpl
     for = Enum.map(
       Map.get(v, :for),
-      &(if "" == &1, do: nil, else: Map.get(acc, &1) |> Map.get(:pid)))
+      &(if "" == &1, do: nil, else: Map.get(acc, &1) |> Map.get(:pid))
+    )
     val = Map.put(v, :for, for)
     Map.put(acc, k, val)
   end
@@ -117,7 +118,7 @@ defmodule Aqfr do
   end
 
   @doc """
-  Reducer: convert CLI argument from string to map entry keyed by identifier
+  Reducer: convert argument from string to map entry keyed by identifier
   """
   def mapify_arg(arg, acc) do
     arg_parts = String.split(arg, " ")
@@ -139,24 +140,45 @@ defmodule Aqfr do
   end
 
   @doc """
-  Convert CLI argument list of strings to map with substrings, via .reduce
+  Convert argument list of strings to map with substrings, via .reduce
   """
   def mapify_args(args) do
     Enum.reduce(args, %{}, &Aqfr.mapify_arg/2)
   end
 
   @doc """
-  Perform primary tasks then delay
+  Get argument list of strings filtered from lines of content in file
+  """
+  def read_argfile(filename) do
+    {_, content} = File.read(filename)
+    String.split(content, "\n")
+    |> Enum.filter(&("" != &1))
+  end
+
+  @doc """
+  CLI option handler: get argument list of strings from file specified
+  """
+  def use_argfile(args) do
+    if Enum.at(args, 0) in ["-f", "--file"] do
+      Enum.at(args, 1)
+      |> Aqfr.read_argfile()
+    else
+      args
+    end
+  end
+
+  @doc """
+  Handle CLI option, perform primary tasks then delay
   """
   def run() do
-    len = length(System.argv)
-    System.argv()
+    args = Aqfr.use_argfile(System.argv())
+    args
     |> Aqfr.mapify_args()
     |> Aqfr.spawn_procs()
     |> Aqfr.update_fors()
     |> Aqfr.supply_fors()
     |> Aqfr.invoke_cmd0()
-    :timer.sleep(len * 5)
+    :timer.sleep(length(args) * 5)
   end
 
 end
