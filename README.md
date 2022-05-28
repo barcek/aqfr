@@ -39,6 +39,7 @@ The hashbang at the top of the file assumes the presence of Elixir.
 
 The following can be passed to `aqfr` as the initial argument:
 
+- `--help` / `-h`, to show usage then exit
 - `--file` / `-f`, to read commands from a named file, where the file contains one command per line, with no need to quote, e.g. `aqfr -f args.txt`
 
 ## Development plan
