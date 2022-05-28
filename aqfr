@@ -1,6 +1,6 @@
 #!/bin/elixir
 
-# aqfr v 1.1.0
+# aqfr v 1.2.0
 # ©2022 barcek
 # License: MIT
 # @ github.com
@@ -156,9 +156,9 @@ defmodule Aqfr do
   end
 
   @doc """
-  CLI option handler: get argument list of strings from file specified
+  CLI option handler: get args from argfile else return args unchanged
   """
-  def use_argfile(args) do
+  def handle_file(args) do
     if Enum.at(args, 0) in ["-f", "--file"] do
       Enum.at(args, 1)
       |> Aqfr.read_argfile()
@@ -168,10 +168,30 @@ defmodule Aqfr do
   end
 
   @doc """
-  Handle CLI option, perform primary tasks then delay
+  CLI option handler: print usage then exit else return args unchanged
+  """
+  def handle_help(args) do
+    if Enum.at(args, 0) in ["-h", "--help"] do
+      IO.puts("Usage: aqfr <cmds> / --file/-f <name> / --help/-h")
+      System.halt(0)
+    else
+      args
+    end
+  end
+
+  @doc """
+  Pass initial argument list through CLI option handlers
+  """
+  def handle_opts(args) do
+    Aqfr.handle_help(args)
+    |> Aqfr.handle_file()
+  end
+
+  @doc """
+  Handle CLI options, perform primary tasks then delay
   """
   def run() do
-    args = Aqfr.use_argfile(System.argv())
+    args = handle_opts(System.argv())
     args
     |> Aqfr.mapify_args()
     |> Aqfr.spawn_procs()
