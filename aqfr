@@ -1,16 +1,16 @@
 #!/bin/elixir
 
-# aqfr v 1.3.1
+# aqfr v 1.3.2
 # ©2022 barcek
 # License: MIT
 # @ github.com
 # /barcek/aqfr
 
 
-defmodule Aqfr do
+defmodule Aqfr.Exec do
   @moduledoc """
-  Run and pipe as required resulting output across a graph of shell commands
-  tagged for interrelationship and passed as CLI arguments or read from file
+  Run, and pipe as required resulting output across, graph of shell commands
+  tagged for interrelationship, received as list of strings from init module
   """
 
   @doc """
@@ -66,7 +66,7 @@ defmodule Aqfr do
   """
   def supply_fors(map) do
     map
-    |> Enum.map(&Aqfr.supply_for/1)
+    |> Enum.map(&Aqfr.Exec.supply_for/1)
     |> Enum.into(%{})
   end
 
@@ -87,14 +87,14 @@ defmodule Aqfr do
   Replace in each map entry each :for identifier with given pid, via .map
   """
   def update_fors(map) do
-    Enum.reduce(map, map, &Aqfr.update_for/2)
+    Enum.reduce(map, map, &Aqfr.Exec.update_for/2)
   end
 
   @doc """
   Mapper: spawn process for map entry tuple and extend with pid returned
   """
   def spawn_proc({k, v}) do
-    pid = spawn(Aqfr, :handle_exec, [Map.get(v, :cmd)])
+    pid = spawn(Aqfr.Exec, :handle_exec, [Map.get(v, :cmd)])
     val = Map.put(v, :pid, pid)
     {k, val}
   end
@@ -104,7 +104,7 @@ defmodule Aqfr do
   """
   def spawn_procs(map) do
     map
-    |> Enum.map(&Aqfr.spawn_proc/1)
+    |> Enum.map(&Aqfr.Exec.spawn_proc/1)
     |> Enum.into(%{})
   end
 
@@ -125,13 +125,13 @@ defmodule Aqfr do
     key =
       arg_parts
       |> Enum.at(0)
-      |> Aqfr.get_idents()
+      |> Aqfr.Exec.get_idents()
       |> Enum.at(0)
     cmd = Enum.slice(arg_parts, 1, length(arg_parts) - 2)
     for =
       arg_parts
       |> Enum.at(-1)
-      |> Aqfr.get_idents()
+      |> Aqfr.Exec.get_idents()
     val = %{
       :cmd => cmd,
       :for => for
@@ -143,8 +143,27 @@ defmodule Aqfr do
   Convert argument list of strings to map with substrings, via .reduce
   """
   def mapify_args(args) do
-    Enum.reduce(args, %{}, &Aqfr.mapify_arg/2)
+    Enum.reduce(args, %{}, &Aqfr.Exec.mapify_arg/2)
   end
+
+  @doc """
+  Perform primary tasks
+  """
+  def run(args) do
+    args
+    |> Aqfr.Exec.mapify_args()
+    |> Aqfr.Exec.spawn_procs()
+    |> Aqfr.Exec.update_fors()
+    |> Aqfr.Exec.supply_fors()
+    |> Aqfr.Exec.invoke_cmd0()
+  end
+
+end
+
+defmodule Aqfr.Init do
+  @moduledoc """
+  Handle CLI options requested, pass remaining args to Exec module and delay
+  """
 
   @doc """
   Get argument list with each use of default tag updated to new, via .map
@@ -161,14 +180,14 @@ defmodule Aqfr do
     args_0 = if i > 0, do: Enum.slice(args, 0, i), else: []
     args_1 = Enum.slice(args, i + 2, length(args) - 1)
     args_reduced = args_0 ++ args_1
-    Aqfr.update_args(tag, args_reduced)
+    Aqfr.Init.update_args(tag, args_reduced)
   end
 
   @doc """
   CLI option handler: apply tags option else return args unchanged
   """
   def handle_tags(args) do
-    handle_opt(args, ["-t", "--tags"], &Aqfr.apply_tags/2)
+    handle_opt(args, ["-t", "--tags"], &Aqfr.Init.apply_tags/2)
   end
 
   @doc """
@@ -187,7 +206,7 @@ defmodule Aqfr do
     filename = Enum.at(args, i + 1)
     args_0 = if i > 0, do: Enum.slice(args, 0, i), else: []
     args_1 = Enum.slice(args, i + 2, length(args) - 1)
-    args_argfile = Aqfr.read_argfile(filename)
+    args_argfile = Aqfr.Init.read_argfile(filename)
     args_0 ++ args_1 ++ args_argfile
   end
 
@@ -195,7 +214,7 @@ defmodule Aqfr do
   CLI option handler: apply file option else return args unchanged
   """
   def handle_file(args) do
-    handle_opt(args, ["-f", "--file"], &Aqfr.apply_file/2)
+    handle_opt(args, ["-f", "--file"], &Aqfr.Init.apply_file/2)
   end
 
   @doc """
@@ -210,7 +229,7 @@ defmodule Aqfr do
   CLI option handler: apply help option else return args unchanged
   """
   def handle_help(args) do
-    handle_opt(args, ["-h", "--help"], &Aqfr.apply_help/2)
+    handle_opt(args, ["-h", "--help"], &Aqfr.Init.apply_help/2)
   end
 
   @doc """
@@ -229,25 +248,20 @@ defmodule Aqfr do
   Pass initial argument list through CLI option handlers
   """
   def handle_opts(args) do
-    Aqfr.handle_help(args)
-    |> Aqfr.handle_file()
-    |> Aqfr.handle_tags()
+    Aqfr.Init.handle_help(args)
+    |> Aqfr.Init.handle_file()
+    |> Aqfr.Init.handle_tags()
   end
 
   @doc """
-  Handle CLI options, perform primary tasks then delay
+  Handle CLI options, run exec module then delay
   """
   def run() do
     args = handle_opts(System.argv())
-    args
-    |> Aqfr.mapify_args()
-    |> Aqfr.spawn_procs()
-    |> Aqfr.update_fors()
-    |> Aqfr.supply_fors()
-    |> Aqfr.invoke_cmd0()
+    Aqfr.Exec.run(args)
     :timer.sleep(length(args) * 5)
   end
 
 end
 
-Aqfr.run()
+Aqfr.Init.run()
