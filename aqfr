@@ -1,6 +1,6 @@
 #!/bin/elixir
 
-# aqfr v 1.3.0
+# aqfr v 1.3.1
 # ©2022 barcek
 # License: MIT
 # @ github.com
@@ -154,19 +154,21 @@ defmodule Aqfr do
   end
 
   @doc """
-  CLI option handler: get args with new tag else return args unchanged
+  CLI option applicator: get existing args with new tag
+  """
+  def apply_tags(args, i) do
+    tag = Enum.at(args, i + 1)
+    args_0 = if i > 0, do: Enum.slice(args, 0, i), else: []
+    args_1 = Enum.slice(args, i + 2, length(args) - 1)
+    args_reduced = args_0 ++ args_1
+    Aqfr.update_args(tag, args_reduced)
+  end
+
+  @doc """
+  CLI option handler: apply tags option else return args unchanged
   """
   def handle_tags(args) do
-    i = Enum.find_index(args, &("-t" == &1 or "--tags" == &1))
-    if nil != i do
-      tag = Enum.at(args, i + 1)
-      args_0 = if i > 0, do: Enum.slice(args, 0, i), else: []
-      args_1 = Enum.slice(args, i + 2, length(args) - 1)
-      args_reduced = args_0 ++ args_1
-      Aqfr.update_args(tag, args_reduced)
-    else
-      args
-    end
+    handle_opt(args, ["-t", "--tags"], &Aqfr.apply_tags/2)
   end
 
   @doc """
@@ -179,28 +181,45 @@ defmodule Aqfr do
   end
 
   @doc """
-  CLI option handler: get args from argfile else return args unchanged
+  CLI option applicator: get args extended from argfile
   """
-  def handle_file(args) do
-    i = Enum.find_index(args, &("-f" == &1 or "--file" == &1))
-    if nil != i do
-      filename = Enum.at(args, i + 1)
-      args_0 = if i > 0, do: Enum.slice(args, 0, i), else: []
-      args_1 = Enum.slice(args, i + 2, length(args) - 1)
-      args_argfile = Aqfr.read_argfile(filename)
-      args_0 ++ args_1 ++ args_argfile
-    else
-      args
-    end
+  def apply_file(args, i) do
+    filename = Enum.at(args, i + 1)
+    args_0 = if i > 0, do: Enum.slice(args, 0, i), else: []
+    args_1 = Enum.slice(args, i + 2, length(args) - 1)
+    args_argfile = Aqfr.read_argfile(filename)
+    args_0 ++ args_1 ++ args_argfile
   end
 
   @doc """
-  CLI option handler: print usage then exit else return args unchanged
+  CLI option handler: apply file option else return args unchanged
+  """
+  def handle_file(args) do
+    handle_opt(args, ["-f", "--file"], &Aqfr.apply_file/2)
+  end
+
+  @doc """
+  CLI option applicator: print usage then exit
+  """
+  def apply_help(_args, _i) do
+    IO.puts("Usage: aqfr <cmds> / --file/-f <name> [--tags/-t <used>] / --help/-h")
+    System.halt(0)
+  end
+
+  @doc """
+  CLI option handler: apply help option else return args unchanged
   """
   def handle_help(args) do
-    if "-h" in args or "--help" in args do
-      IO.puts("Usage: aqfr <cmds> / --file/-f <name> [--tags/-t <used>] / --help/-h")
-      System.halt(0)
+    handle_opt(args, ["-h", "--help"], &Aqfr.apply_help/2)
+  end
+
+  @doc """
+  Apply CLI option if flag in args and return new or existing args
+  """
+  def handle_opt(args, flags, apply) do
+    i = Enum.find_index(args, &(&1 in flags))
+    if nil != i do
+      apply.(args, i)
     else
       args
     end
