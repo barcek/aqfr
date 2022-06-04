@@ -37,10 +37,11 @@ The hashbang at the top of the file assumes the presence of Elixir.
 
 ## Options
 
-The following can be passed to `aqfr` as the initial argument:
+The following can be passed to `aqfr`:
 
+- `--file` / `-f`, to read commands from a named file, where the file contains one unquoted command per line, e.g. `aqfr -f args.txt`
+- `--tags` / `-t`, to identify a non-default tag, where used, e.g. `aqfr -t TAG`
 - `--help` / `-h`, to show usage then exit
-- `--file` / `-f`, to read commands from a named file, where the file contains one command per line, with no need to quote, e.g. `aqfr -f args.txt`
 
 ## Development plan
 
@@ -48,4 +49,3 @@ The following are possible next steps in the development of the code base. The g
 
 - revise the script timeout to account for process completion
 - provide error handling
-- add a help option
