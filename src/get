@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# copy for output file
+cp lib/aqfr.ex ../aqfr
+
+# uncomment final line
+sed -i '$d' ../aqfr
+echo $(tail -n 1 lib/aqfr.ex | tr -d "#") >> ../aqfr
+
+# make file executable
+chmod +x ../aqfr
+
+# update version number
+v=$(grep -E "# aqfr v\s?" lib/aqfr.ex | grep -Eo "[0-9]+\.[0-9]+\.[0-9]+")
+sed -i -e "s/version: \"[[:digit:]]*.[[:digit:]]*.[[:digit:]]*\"/version: \"${v}\"/" mix.exs

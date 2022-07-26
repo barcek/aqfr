@@ -264,4 +264,4 @@ defmodule Aqfr.Init do
 
 end
 
-Aqfr.Init.run()
+#Aqfr.Init.run()
