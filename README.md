@@ -35,6 +35,12 @@ The script can be run with the command `./aqfr` while in the same directory, and
 
 The hashbang at the top of the file assumes the presence of Elixir.
 
+### Making changes
+
+The src/ folder contains a Mix project, with the primary aqfr source file at src/lib/aqfr.ex. This setup allows the script to be developed and tested with the use of the Mix build tool.
+
+The output file can be produced by running the shell script at src/get, which copies the primary file to the root directory, uncomments the final line and makes the output file executable, as well as copies the primary file version number to src/mix.exs.
+
 ## Options
 
 The following can be passed to `aqfr`:
@@ -48,4 +54,5 @@ The following can be passed to `aqfr`:
 The following are possible next steps in the development of the code base. The general medium-term aim is a convenient command line multiplier with major use cases covered. Pull requests are welcome for these and any other potential improvements.
 
 - revise the script timeout to account for process completion
+- add doctests and fuller test coverage
 - provide error handling
