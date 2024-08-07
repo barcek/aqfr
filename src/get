@@ -1,15 +1,26 @@
 #!/bin/sh
 
-# copy for output file
-cp lib/aqfr.ex ../aqfr
+path_mix="mix.exs"
+path_src="lib/aqfr.ex"
+path_out="../aqfr"
+
+# obtain version number
+v=$(grep -E "version: \".*?\"" $path_mix | grep -Eo "[0-9]+\.[0-9]+\.[0-9]+")
+
+# provide file content
+echo "#!/bin/elixir"    > $path_out
+echo                   >> $path_out
+echo "# aqfr v ${v}"   >> $path_out
+echo "# ©2022 barcek"  >> $path_out
+echo "# License: MIT"  >> $path_out
+echo "# @ github.com"  >> $path_out
+echo "# /barcek/aqfr"  >> $path_out
+echo                   >> $path_out
+cat  $path_src         >> $path_out
 
 # uncomment final line
-sed -i '$d' ../aqfr
-echo $(tail -n 1 lib/aqfr.ex | tr -d "#") >> ../aqfr
+sed -i '$d' $path_out
+echo $(tail -n 1 $path_src | tr -d "#") >> $path_out
 
 # make file executable
-chmod +x ../aqfr
-
-# update version number
-v=$(grep -E "# aqfr v\s?" lib/aqfr.ex | grep -Eo "[0-9]+\.[0-9]+\.[0-9]+")
-sed -i -e "s/version: \"[[:digit:]]*.[[:digit:]]*.[[:digit:]]*\"/version: \"${v}\"/" mix.exs
+chmod +x $path_out

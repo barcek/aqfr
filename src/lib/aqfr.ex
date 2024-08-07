@@ -1,11 +1,3 @@
-#!/bin/elixir
-
-# aqfr v 1.4.0
-# ©2022 barcek
-# License: MIT
-# @ github.com
-# /barcek/aqfr
-
 
 defmodule Aqfr.Exec do
   @moduledoc """
