@@ -37,9 +37,21 @@ The hashbang at the top of the file assumes the presence of Elixir.
 
 ### Making changes
 
-The src/ folder contains a Mix project, with the primary aqfr source file at src/lib/aqfr.ex. This setup allows the script to be developed and tested with the use of the Mix build tool.
+The 'src' directory contains a Mix project, with the primary aqfr source file at 'src/lib/aqfr.ex'. This setup allows the script to be developed and tested with the use of the Mix build tool.
 
-The output file can be produced by running the shell script at src/get, which copies the primary file to the root directory, uncomments the final line and makes the output file executable, as well as copies the primary file version number to src/mix.exs.
+The output file can be produced by running the shell script at 'src/get'. This obtains the version number from 'src/mix.exs', creates the output file in the root directory with initial content, then copies in the content of the primary file, uncomments the final line and makes the output file executable.
+
+Running the tests after making changes and adding tests to cover new behaviour is recommended.
+
+#### Tests
+
+The tests can be run from within the 'src' directory with the following command:
+
+```shell
+mix test
+```
+
+The tests depend on the presence of the output file in the root directory and the args files in 'src/test'.
 
 ## Options
 
