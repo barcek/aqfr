@@ -2,8 +2,10 @@ defmodule Aqfr.Test do
 
   use ExUnit.Case
 
-  doctest Aqfr.Exec
-  doctest Aqfr.Init
+  doctest Aqfr.Main
+  doctest Aqfr.Opts
+  doctest Aqfr.Cmds
+  doctest Aqfr.Core
 
   @expected_cmds '4\n2\n'
   @expected_help 'Usage: aqfr <cmds> / --file/-f <name> [--tags/-t <used>] / --help/-h\n'
