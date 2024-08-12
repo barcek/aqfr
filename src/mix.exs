@@ -4,7 +4,7 @@ defmodule Aqfr.MixProject do
   def project do
     [
       app: :aqfr,
-      version: "1.5.2",
+      version: "1.5.3",
       elixir: "~> 1.13"
     ]
   end
