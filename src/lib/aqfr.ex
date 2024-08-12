@@ -14,21 +14,17 @@ defmodule Aqfr.Exec do
       {:for, for} ->
         handle_exec(cmd, for)
       {:pre, pre} ->
-        flow = if nil != pre, do: "echo \"#{String.trim(pre)}\" | ", else: ""
-        prog = Enum.at(cmd, 0)
-        args =
-          cmd
-          |> Enum.slice(1, length(cmd) - 1)
-          |> Enum.join(" ")
-        str = "#{flow}#{prog} #{args}"
+        all = if nil != pre, do: "echo \"#{String.trim(pre)}\" | #{cmd}", else: cmd
         res =
-          str
+          all
           |> String.to_charlist
           |> :os.cmd
           |> to_string()
           |> String.trim()
         Enum.each(for, &(if nil != &1, do: send(&1, {:pre, res}), else: IO.puts(res)))
         handle_exec(cmd, for)
+      after
+        1_000 -> nil
     end
   end
 
@@ -125,7 +121,7 @@ defmodule Aqfr.Exec do
       |> Enum.at(-1)
       |> Aqfr.Exec.get_idents()
     val = %{
-      :cmd => cmd,
+      :cmd => Enum.join(cmd, " "),
       :for => for
     }
     Map.put(acc, key, val)
@@ -246,12 +242,12 @@ defmodule Aqfr.Init do
   end
 
   @doc """
-  Handle CLI options, run exec module then delay
+  Handle CLI options and run exec module
   """
   def run() do
-    args = handle_opts(System.argv())
-    Aqfr.Exec.run(args)
-    :timer.sleep(length(args) * 5)
+    System.argv()
+    |> handle_opts()
+    |> Aqfr.Exec.run()
   end
 
 end
