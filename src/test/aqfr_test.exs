@@ -13,11 +13,11 @@ defmodule Aqfr.Test do
 
   test "Opts, no options" do
 
-    provided_zero = []
+    provided_zero = {:run, []}
     expected_zero = provided_zero
     obtained_zero = Aqfr.Opts.parse(provided_zero)
 
-    provided_cmds = @provided_cmds
+    provided_cmds = {:run, @provided_cmds}
     expected_cmds = provided_cmds
     obtained_cmds = Aqfr.Opts.parse(provided_cmds)
 
@@ -27,12 +27,12 @@ defmodule Aqfr.Test do
 
   test "Opts, option 'file'" do
 
-    provided_word = ["--file", "test/args_file.txt"]
-    expected_word = @provided_cmds
+    provided_word = {:run, ["--file", "test/args_file.txt"]}
+    expected_word = {:run, @provided_cmds}
     obtained_word = Aqfr.Opts.parse(provided_word)
 
-    provided_char = ["-f", "test/args_file.txt"]
-    expected_char = @provided_cmds
+    provided_char = {:run, ["-f", "test/args_file.txt"]}
+    expected_char = {:run, @provided_cmds}
     obtained_char = Aqfr.Opts.parse(provided_char)
 
     assert expected_word == obtained_word
@@ -41,12 +41,12 @@ defmodule Aqfr.Test do
 
   test "Opts, option 'tags'" do
 
-    provided_word = ["--tags", "TAG", "TAG1 ls test TAG2TAG3", "TAG2 wc -l TAG", "TAG3 grep exs TAG2"]
-    expected_word = @provided_cmds
+    provided_word = {:run, ["--tags", "TAG", "TAG1 ls test TAG2TAG3", "TAG2 wc -l TAG", "TAG3 grep exs TAG2"]}
+    expected_word = {:run, @provided_cmds}
     obtained_word = Aqfr.Opts.parse(provided_word)
 
-    provided_char = ["-t", "TAG", "TAG1 ls test TAG2TAG3", "TAG2 wc -l TAG", "TAG3 grep exs TAG2"]
-    expected_char = @provided_cmds
+    provided_char = {:run, ["-t", "TAG", "TAG1 ls test TAG2TAG3", "TAG2 wc -l TAG", "TAG3 grep exs TAG2"]}
+    expected_char = {:run, @provided_cmds}
     obtained_char = Aqfr.Opts.parse(provided_char)
 
     assert expected_word == obtained_word
@@ -55,8 +55,8 @@ defmodule Aqfr.Test do
 
   test "Opts, options, two ('file', 'tags')" do
 
-    provided = ["--file", "test/args_file_tags.txt", "--tags", "TAG"]
-    expected = @provided_cmds
+    provided = {:run, ["--file", "test/args_file_tags.txt", "--tags", "TAG"]}
+    expected = {:run, @provided_cmds}
     obtained = Aqfr.Opts.parse(provided)
 
     assert expected == obtained
@@ -64,7 +64,8 @@ defmodule Aqfr.Test do
 
   test "Cmds" do
 
-    expected = %{
+    provided = {:run, @provided_cmds}
+    expected = {:run, %{
       "1" => %{
         cmd: "ls test",
         for: ["2", "3"]
@@ -77,8 +78,8 @@ defmodule Aqfr.Test do
         cmd: "grep exs",
         for: ["2"]
       }
-    }
-    obtained = Aqfr.Cmds.parse(@provided_cmds)
+    }}
+    obtained = Aqfr.Cmds.parse(provided)
 
     assert expected == obtained
   end

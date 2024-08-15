@@ -1,6 +1,6 @@
 #!/bin/elixir
 
-# aqfr v 1.5.4
+# aqfr v 1.5.5
 # ©2022 barcek
 # License: MIT
 # @ github.com
@@ -26,13 +26,22 @@ defmodule Aqfr.Main do
   def lag(), do: @lag
 
   @doc """
-  Pipe CLI arguments through modules
+  Pipe CLI arguments through modules and handle results
   """
   def run() do
-    System.argv()
+    {:run, System.argv()}
     |> Aqfr.Opts.parse()
     |> Aqfr.Cmds.parse()
+    |> perform_effects()
     |> Aqfr.Core.start()
+  end
+
+  defp perform_effects({task, args}) do
+    case task do
+      :end -> IO.puts(Enum.join(args, "\n"))
+              System.halt(0)
+      _    -> {task, args}
+    end
   end
 
 end
@@ -50,63 +59,49 @@ defmodule Aqfr.Opts do
   @doc """
   Pipe CLI arguments through option handlers
   """
-  def parse(args) do
-    args
-    |> handle_help()
-    |> handle_file()
-    |> handle_tags()
+  def parse({task, args}) do
+    {task, args}
+    |> handle_opt(@flags_help, &apply_help/2)
+    |> handle_opt(@flags_file, &apply_file/2)
+    |> handle_opt(@flags_tags, &apply_tags/2)
   end
 
-  defp handle_opt(args, flags, apply) do
+  defp handle_opt({task, args}, flags, apply) do
     i = Enum.find_index(args, &(&1 in flags))
-    if nil != i do
-      apply.(args, i)
-    else
-      args
+    case task do
+      :run when i != nil -> apply.(args, i)
+      _                  -> {task, args}
     end
   end
 
-  defp handle_help(args) do
-    handle_opt(args, @flags_help, &apply_help/2)
-  end
-
   defp apply_help(_args, _i) do
-    IO.puts(@text_usage)
-    System.halt(0)
-  end
-
-  defp handle_file(args) do
-    handle_opt(args, @flags_file, &apply_file/2)
+    {:end, [@text_usage]}
   end
 
   defp apply_file(args, i) do
-    filename = Enum.at(args, i + 1)
-    args_0 = if i > 0, do: Enum.slice(args, 0, i), else: []
-    args_1 = Enum.slice(args, i + 2, length(args) - 1)
-    args_argfile = read_argfile(filename)
-    args_0 ++ args_1 ++ args_argfile
+    path = Enum.at(args, i + 1)
+    {:run, args
+    |> drop_slice(i, 2)
+    |> Enum.concat(load_lines(path))}
   end
 
-  defp read_argfile(filename) do
-    {_, content} = File.read(filename)
+  defp load_lines(path) do
+    {_, content} = File.read(path)
     String.split(content, "\n")
     |> Enum.filter(&("" != &1))
   end
 
-  defp handle_tags(args) do
-    handle_opt(args, @flags_tags, &apply_tags/2)
-  end
-
   defp apply_tags(args, i) do
     tag = Enum.at(args, i + 1)
-    args_0 = if i > 0, do: Enum.slice(args, 0, i), else: []
-    args_1 = Enum.slice(args, i + 2, length(args) - 1)
-    args_reduced = args_0 ++ args_1
-    update_args(tag, args_reduced)
+    {:run, args
+    |> drop_slice(i, 2)
+    |> Enum.map(&(String.replace(&1, tag, Aqfr.Main.tag)))}
   end
 
-  defp update_args(tag, args) do
-    Enum.map(args, &(String.replace(&1, tag, Aqfr.Main.tag)))
+  defp drop_slice(list, i, n) do
+    head = if i > 0, do: Enum.slice(list, 0..i), else: []
+    tail = Enum.slice(list, (i + n)..-1)
+    head ++ tail
   end
 
 end
@@ -119,32 +114,27 @@ defmodule Aqfr.Cmds do
   @doc """
   Reduce CLI arguments to map for command extraction
   """
-  def parse(args) do
-    Enum.reduce(args, %{}, &mapify_arg/2)
+  def parse({task, args}) do
+    case task do
+      :run -> {task, Enum.reduce(args, %{}, &mapify_arg/2)}
+      _    -> {task, args}
+    end
   end
 
   defp mapify_arg(arg, acc) do
     arg_parts = String.split(arg, " ")
-    key =
-      arg_parts
-      |> Enum.at(0)
-      |> get_idents()
-      |> Enum.at(0)
-    cmd = Enum.slice(arg_parts, 1, length(arg_parts) - 2)
-    for =
-      arg_parts
-      |> Enum.at(-1)
-      |> get_idents()
-    val = %{
-      :cmd => Enum.join(cmd, " "),
+    key = arg_parts |> Enum.at(0)        |> get_idents |> Enum.at(0)
+    cmd = arg_parts |> Enum.slice(1..-2) |> Enum.join(" ")
+    for = arg_parts |> Enum.at(-1)       |> get_idents
+    Map.put(acc, key, %{
+      :cmd => cmd,
       :for => for
-    }
-    Map.put(acc, key, val)
+    })
   end
 
   defp get_idents(str) do
-    list = String.split(str, Aqfr.Main.tag)
-    Enum.slice(list, 1, length(list) - 1)
+    String.split(str, Aqfr.Main.tag)
+    |> Enum.slice(1..-1)
   end
 
 end
@@ -158,7 +148,7 @@ defmodule Aqfr.Core do
   @doc """
   Pipe command map through tasks and invoke initial
   """
-  def start(args) do
+  def start({_task, args}) do
     args
     |> spawn_procs()
     |> update_fors()
