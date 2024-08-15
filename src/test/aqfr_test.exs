@@ -53,10 +53,33 @@ defmodule Aqfr.Test do
     assert expected_char == obtained_char
   end
 
+  test "Opts, option 'help'" do
+
+    provided_word = {:run, ["--help"]}
+    expected_word = {:end, [List.to_string(@expected_help) |> String.trim]}
+    obtained_word = Aqfr.Opts.parse(provided_word)
+
+    provided_char = {:run, ["-h"]}
+    expected_char = {:end, [List.to_string(@expected_help) |> String.trim]}
+    obtained_char = Aqfr.Opts.parse(provided_char)
+
+    assert expected_word == obtained_word
+    assert expected_char == obtained_char
+  end
+
   test "Opts, options, two ('file', 'tags')" do
 
     provided = {:run, ["--file", "test/args_file_tags.txt", "--tags", "TAG"]}
     expected = {:run, @provided_cmds}
+    obtained = Aqfr.Opts.parse(provided)
+
+    assert expected == obtained
+  end
+
+  test "Opts, options, two + 'help'" do
+
+    provided = {:run, ["--file", "test/args_file_tags.txt", "--tags", "TAG", "--help"]}
+    expected = {:end, [List.to_string(@expected_help) |> String.trim]}
     obtained = Aqfr.Opts.parse(provided)
 
     assert expected == obtained
